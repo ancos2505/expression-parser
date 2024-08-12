@@ -3,6 +3,7 @@ mod location;
 mod parser;
 mod result;
 mod tokens;
+mod ast_parser;
 
 use crate::{lexer::Lexer, parser::Parser, result::AppResult};
 
