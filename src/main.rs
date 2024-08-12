@@ -1,0 +1,40 @@
+mod lexer;
+mod location;
+mod parser;
+mod result;
+
+use crate::{lexer::Lexer, parser::Parser, result::AppResult};
+
+fn main() -> AppResult<()> {
+    let input = "3 + 4 * (2 + 1)^2";
+    dbg!(input);
+    let mut lexer = Lexer::new(input);
+    dbg!(&lexer);
+
+    let mut tokens = Vec::new();
+    while let Some(token) = lexer.next_token()? {
+        tokens.push(token);
+    }
+    dbg!(&lexer, &tokens);
+
+    println!("Tokens: {:?}", tokens);
+
+    let mut parser = Parser::new(tokens);
+    let ast = parser.parse()?;
+
+    println!("AST: {}", ast);
+    Ok(())
+}
+
+#[derive(Debug, PartialEq, Clone)]
+pub enum Token {
+    Number(f64),
+    Plus,
+    Minus,
+    Multiply,
+    Divide,
+    Power,
+    LeftParen,
+    RightParen,
+    Whitespace,
+}
