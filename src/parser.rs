@@ -1,9 +1,9 @@
-use crate::Token;
-
 use std::{
     error::Error,
     fmt::{self, Display},
 };
+
+use crate::tokens::{Divide, LeftParen, Minus, Multiply, Number, Plus, Power, Token};
 
 type ParserResult<T> = Result<T, ParserError>;
 
@@ -31,7 +31,7 @@ impl Display for ASTNode {
 }
 
 pub struct Parser {
-    tokens: Vec<Token>,
+    tokens: Vec<Box<dyn Token>>,
     pos: usize,
 }
 
@@ -46,7 +46,7 @@ impl Display for ParserError {
 impl Error for ParserError {}
 
 impl Parser {
-    pub fn new(tokens: Vec<Token>) -> Self {
+    pub fn new(tokens: Vec<Box<dyn Token>>) -> Self {
         Parser { tokens, pos: 0 }
     }
 
@@ -59,15 +59,18 @@ impl Parser {
 
         while self.pos < self.tokens.len() {
             match self.tokens.get(self.pos) {
-                Some(Token::Plus) => {
-                    self.pos += 1;
-                    let right = self.parse_term()?;
-                    left = ASTNode::Add(Box::new(left), Box::new(right));
-                }
-                Some(Token::Minus) => {
-                    self.pos += 1;
-                    let right = self.parse_term()?;
-                    left = ASTNode::Subtract(Box::new(left), Box::new(right));
+                Some(token) => {
+                    if token.as_any().downcast_ref::<Plus>().is_some() {
+                        self.pos += 1;
+                        let right = self.parse_term()?;
+                        left = ASTNode::Add(Box::new(left), Box::new(right));
+                    } else if token.as_any().downcast_ref::<Minus>().is_some() {
+                        self.pos += 1;
+                        let right = self.parse_term()?;
+                        left = ASTNode::Subtract(Box::new(left), Box::new(right));
+                    } else {
+                        break;
+                    }
                 }
                 _ => break,
             }
@@ -81,16 +84,20 @@ impl Parser {
 
         while self.pos < self.tokens.len() {
             match self.tokens.get(self.pos) {
-                Some(Token::Multiply) => {
-                    self.pos += 1;
-                    let right = self.parse_factor()?;
-                    left = ASTNode::Multiply(Box::new(left), Box::new(right));
+                Some(token) => {
+                    if token.as_any().downcast_ref::<Multiply>().is_some() {
+                        self.pos += 1;
+                        let right = self.parse_factor()?;
+                        left = ASTNode::Multiply(Box::new(left), Box::new(right));
+                    } else if token.as_any().downcast_ref::<Divide>().is_some() {
+                        self.pos += 1;
+                        let right = self.parse_factor()?;
+                        left = ASTNode::Divide(Box::new(left), Box::new(right));
+                    } else {
+                        break;
+                    }
                 }
-                Some(Token::Divide) => {
-                    self.pos += 1;
-                    let right = self.parse_factor()?;
-                    left = ASTNode::Divide(Box::new(left), Box::new(right));
-                }
+
                 _ => break,
             }
         }
@@ -100,8 +107,13 @@ impl Parser {
 
     fn parse_factor(&mut self) -> ParserResult<ASTNode> {
         let base = self.parse_primary()?;
+        let maybe_token = self
+            .tokens
+            .get(self.pos)
+            .map(|x| x.as_any().downcast_ref::<Power>())
+            .flatten();
 
-        if self.pos < self.tokens.len() && self.tokens.get(self.pos) == Some(&Token::Power) {
+        if self.pos < self.tokens.len() && maybe_token == Some(&Power) {
             self.pos += 1;
             let exponent = self.parse_factor()?;
             Ok(ASTNode::Power(Box::new(base), Box::new(exponent)))
@@ -112,16 +124,20 @@ impl Parser {
 
     fn parse_primary(&mut self) -> ParserResult<ASTNode> {
         match &self.tokens.get(self.pos) {
-            Some(Token::Number(n)) => {
-                self.pos += 1;
-                Ok(ASTNode::Number(*n))
+            Some(token) => {
+                if let Some(number) = token.as_any().downcast_ref::<Number>() {
+                    self.pos += 1;
+                    Ok(ASTNode::Number(number.0))
+                } else if token.as_any().downcast_ref::<LeftParen>().is_some() {
+                    self.pos += 1;
+                    let expr = self.parse_expression()?;
+                    self.pos += 1; // Consume right paren
+                    Ok(expr)
+                } else {
+                    Err(ParserError("Unexpected token".into()))
+                }
             }
-            Some(Token::LeftParen) => {
-                self.pos += 1;
-                let expr = self.parse_expression()?;
-                self.pos += 1; // Consume right paren
-                Ok(expr)
-            }
+
             _ => Err(ParserError("Unexpected token".into())),
         }
     }

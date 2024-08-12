@@ -2,6 +2,7 @@ mod lexer;
 mod location;
 mod parser;
 mod result;
+mod tokens;
 
 use crate::{lexer::Lexer, parser::Parser, result::AppResult};
 
@@ -24,17 +25,4 @@ fn main() -> AppResult<()> {
 
     println!("AST: {}", ast);
     Ok(())
-}
-
-#[derive(Debug, PartialEq, Clone)]
-pub enum Token {
-    Number(f64),
-    Plus,
-    Minus,
-    Multiply,
-    Divide,
-    Power,
-    LeftParen,
-    RightParen,
-    Whitespace,
 }

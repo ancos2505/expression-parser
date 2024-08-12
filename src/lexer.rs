@@ -3,7 +3,10 @@ use std::{
     fmt::{self, Display},
 };
 
-use crate::{location::Location, Token};
+use crate::{
+    location::Location,
+    tokens::{Divide, LeftParen, Minus, Multiply, Number, Plus, Power, RightParen, Token},
+};
 
 type LexerResult<T> = Result<T, LexerError>;
 
@@ -43,7 +46,7 @@ impl<'a> Lexer<'a> {
         }
     }
 
-    pub fn next_token(&mut self) -> LexerResult<Option<Token>> {
+    pub fn next_token(&mut self) -> LexerResult<Option<Box<dyn Token>>> {
         self.skip_whitespace()?;
 
         let (_, after) = self
@@ -60,31 +63,31 @@ impl<'a> Lexer<'a> {
                     '0'..='9' => self.read_number(),
                     '+' => {
                         self.location.advance(ch);
-                        Ok(Token::Plus)
+                        Ok(Plus.to_token())
                     }
                     '-' => {
                         self.location.advance(ch);
-                        Ok(Token::Minus)
+                        Ok(Minus.to_token())
                     }
                     '*' => {
                         self.location.advance(ch);
-                        Ok(Token::Multiply)
+                        Ok(Multiply.to_token())
                     }
                     '/' => {
                         self.location.advance(ch);
-                        Ok(Token::Divide)
+                        Ok(Divide.to_token())
                     }
                     '(' => {
                         self.location.advance(ch);
-                        Ok(Token::LeftParen)
+                        Ok(LeftParen.to_token())
                     }
                     ')' => {
                         self.location.advance(ch);
-                        Ok(Token::RightParen)
+                        Ok(RightParen.to_token())
                     }
                     '^' => {
                         self.location.advance(ch);
-                        Ok(Token::Power)
+                        Ok(Power.to_token())
                     }
                     _ => Err(LexerError {
                         message: format!("Unexpected character: {}", ch),
@@ -101,7 +104,7 @@ impl<'a> Lexer<'a> {
         }
     }
 
-    fn read_number(&mut self) -> LexerResult<Token> {
+    fn read_number(&mut self) -> LexerResult<Box<dyn Token>> {
         let mut number = String::new();
         let start_location = self.location;
         let mut has_decimal = false;
@@ -134,15 +137,12 @@ impl<'a> Lexer<'a> {
             });
         }
 
-        let token = number
-            .parse::<f64>()
-            .map(Token::Number)
-            .map_err(|_| LexerError {
-                message: format!("Invalid number: {}", number),
-                location: start_location,
-            })?;
+        let token = number.parse::<f64>().map(Number).map_err(|_| LexerError {
+            message: format!("Invalid number: {}", number),
+            location: start_location,
+        })?;
 
-        Ok(token)
+        Ok(token.to_token())
     }
 
     fn skip_whitespace(&mut self) -> LexerResult<()> {
