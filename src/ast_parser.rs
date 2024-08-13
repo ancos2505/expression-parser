@@ -221,12 +221,23 @@ mod tests {
 
     #[test]
     fn it_works() {
-        let root = power(plus(number(2.0), number(3.0)), number(5.0));
+        let input = "3 + 4 * (2 + 1)^2";
+        let root = plus(
+            number(3.0),
+            multiply(
+                number(4.0),
+                power(plus(number(2.0), number(1.0)), number(2.0)),
+            ),
+        );
+
         let ast = AST {
-            depth: root.depth + 1,
+            depth: root.depth,
             tree: Box::new(root),
         };
 
+        dbg!(&ast);
+
+        dbg!(&input);
         println!("{}", ast);
     }
 }

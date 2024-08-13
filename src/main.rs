@@ -1,9 +1,9 @@
+mod ast_parser;
 mod lexer;
 mod location;
 mod parser;
 mod result;
 mod tokens;
-mod ast_parser;
 
 use crate::{lexer::Lexer, parser::Parser, result::AppResult};
 
@@ -19,11 +19,10 @@ fn main() -> AppResult<()> {
     }
     dbg!(&lexer, &tokens);
 
-    println!("Tokens: {:?}", tokens);
-
     let mut parser = Parser::new(tokens);
     let ast = parser.parse()?;
 
+    dbg!(&ast);
     println!("AST: {}", ast);
     Ok(())
 }
